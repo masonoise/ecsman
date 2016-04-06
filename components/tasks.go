@@ -13,7 +13,7 @@ import (
 
 	"encoding/json"
 
-	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
@@ -100,9 +100,9 @@ func CheckServiceTasks(awsConn *ecs.ECS, clusterName string,
 //
 // Run a task - runs 1 instance of the specified task.
 //
-func RunTask(creds *credentials.Credentials, region string, clusterName string, taskName string) {
+func RunTask(session *session.Session, clusterName string, taskName string) {
 	fmt.Println("Running one instance of task", taskName)
-	awsConn := GetEcsConnection(creds, region)
+	awsConn := GetEcsConnection(session)
 	var startedBy = "ecsman"
 	var runCount = int64(1)
 	runTaskOutput, err := awsConn.RunTask(&ecs.RunTaskInput{
@@ -130,14 +130,14 @@ func RunTask(creds *credentials.Credentials, region string, clusterName string, 
 //
 // Print the task definitions
 //
-func PrintTasks(creds *credentials.Credentials, region string, taskFamily string, taskRevision string) {
+func PrintTasks(session *session.Session, taskFamily string, taskRevision string) {
 	var wantedRevision string
 	if taskRevision == "latest" {
 		wantedRevision = "latest"
 	} else {
 		wantedRevision = fmt.Sprintf("%s:%s", taskFamily, taskRevision)
 	}
-	awsConn := GetEcsConnection(creds, region)
+	awsConn := GetEcsConnection(session)
 	listInput := ecs.ListTaskDefinitionsInput{}
 	if taskFamily != "" {
 		listInput.FamilyPrefix = &taskFamily
@@ -193,10 +193,10 @@ type TaskDefn struct {
 //
 // Read a task definition from JSON file and register it.
 //
-func CreateTask(creds *credentials.Credentials, region string, taskFile string) {
+func CreateTask(session *session.Session, taskFile string) {
 	fmt.Printf("Registering Task Definition...\n\n")
 	// Create a client connection object.
-	awsConn := GetEcsConnection(creds, region)
+	awsConn := GetEcsConnection(session)
 
 	// Pass the file in and get back the parsed container definition and the task family string
 	containerDefinition, taskFamily := makeTaskDefinition(taskFile)

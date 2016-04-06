@@ -18,7 +18,9 @@ import (
 
 	"github.com/masonoise/ecsman/components"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 /*
@@ -87,48 +89,53 @@ func main() {
 		creds = credentials.NewSharedCredentials("", credProfile)
 	}
 
+	var session = session.New(&aws.Config{
+		Region:      aws.String(*regionFlag),
+		Credentials: creds,
+	})
+
 	// Okay, what do we want to do today?
 	switch {
 	case operation == "ls" && flag.NArg() < 2: // ls without a cluster name
-		components.ListClusters(creds, *regionFlag)
+		components.ListClusters(session)
 	case operation == "ls" && flag.NArg() > 1: // ls with cluster name and maybe service name
 		var serviceName = ""
 		if flag.NArg() > 2 {
 			serviceName = flag.Arg(2)
 		}
 		var loadBalancers []*string // Save from printServices in case user wants the ELB info printed too.
-		loadBalancers = components.PrintServices(creds, *regionFlag, flag.Arg(1), serviceName, *verboseFlag, *eventsFlag)
+		loadBalancers = components.PrintServices(session, flag.Arg(1), serviceName, *verboseFlag, *eventsFlag)
 		if *elbFlag {
-			components.PrintElbs(creds, *regionFlag, loadBalancers)
+			components.PrintElbs(session, loadBalancers)
 		}
 	case operation == "register":
 		if flag.NArg() < 2 { // Make sure there's a task.JSON filename provided
 			usageMsg("Must specify JSON file describing the task to register.")
 		}
-		components.CreateTask(creds, *regionFlag, flag.Arg(1))
+		components.CreateTask(session, flag.Arg(1))
 	case operation == "update":
 		if flag.NArg() < 4 { // Need cluster name, service name, and image URL
 			usageMsg("Must specify cluster name, service name, and image URL to update.")
 		}
-		components.UpdateService(creds, *regionFlag, flag.Arg(1), flag.Arg(2), flag.Arg(3))
+		components.UpdateService(session, flag.Arg(1), flag.Arg(2), flag.Arg(3))
 	case operation == "check":
 		if flag.NArg() < 3 { // Need cluster name and service name
 			usageMsg("Must specify cluster name and service name to check.")
 		}
-		components.CheckService(creds, *regionFlag, flag.Arg(1), flag.Arg(2), *verboseFlag)
+		components.CheckService(session, flag.Arg(1), flag.Arg(2), *verboseFlag)
 	case operation == "run":
 		if flag.NArg() < 3 { // Make sure there's a cluster name and  task name provided
 			usageMsg("Must specify a cluster name and the task name to run.")
 		}
-		components.RunTask(creds, *regionFlag, flag.Arg(1), flag.Arg(2))
+		components.RunTask(session, flag.Arg(1), flag.Arg(2))
 	case operation == "taskdefs":
 		if flag.NArg() < 2 {
-			components.PrintTasks(creds, *regionFlag, "", "")
+			components.PrintTasks(session, "", "")
 		} else {
 			if flag.NArg() < 3 {
-				components.PrintTasks(creds, *regionFlag, flag.Arg(1), "")
+				components.PrintTasks(session, flag.Arg(1), "")
 			} else {
-				components.PrintTasks(creds, *regionFlag, flag.Arg(1), flag.Arg(2))
+				components.PrintTasks(session, flag.Arg(1), flag.Arg(2))
 			}
 		}
 	case operation != "":

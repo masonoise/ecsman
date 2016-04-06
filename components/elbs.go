@@ -8,19 +8,18 @@ package components
 import (
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/elb"
 )
 
 //
 // Takes a list of ELB names, retrieves their details and prints.
 //
-func PrintElbs(creds *credentials.Credentials, region string, loadBalancers []*string) {
+func PrintElbs(session *session.Session, loadBalancers []*string) {
 	if len(loadBalancers) > 0 {
 		fmt.Println("")
 		PrintSeparator()
-		balancerInfo := GetElbData(creds, region, loadBalancers)
+		balancerInfo := GetElbData(session, loadBalancers)
 		for _, balancer := range balancerInfo.LoadBalancerDescriptions {
 			fmt.Println("  Load Balancer:", *balancer.LoadBalancerName)
 			fmt.Println("  - DNSName:", *balancer.DNSName)
@@ -38,12 +37,9 @@ func PrintElbs(creds *credentials.Credentials, region string, loadBalancers []*s
 //
 // Fetch ELB data
 //
-func GetElbData(creds *credentials.Credentials, region string, loadBalancers []*string) *elb.DescribeLoadBalancersOutput {
+func GetElbData(session *session.Session, loadBalancers []*string) *elb.DescribeLoadBalancersOutput {
 	// We need to get a new client because the "ELB" service is different from the "ECS" service.
-	elbAwsConn := elb.New(&aws.Config{
-		Region:      aws.String(region),
-		Credentials: creds,
-	})
+	elbAwsConn := elb.New(session)
 
 	// Fetch the details given the list of ELBs.
 	balancerInfo, err := elbAwsConn.DescribeLoadBalancers(&elb.DescribeLoadBalancersInput{

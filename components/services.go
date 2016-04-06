@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
@@ -18,8 +18,7 @@ import (
 // Fetches and prints the information about the services. It also collects the names of the load balancers in use and
 // returns them so that the printElbs() function can use them if desired.
 //
-func PrintServices(creds *credentials.Credentials,
-	region string,
+func PrintServices(session *session.Session,
 	clusterName string,
 	serviceName string,
 	verboseFlag bool,
@@ -28,7 +27,7 @@ func PrintServices(creds *credentials.Credentials,
 	var foundService = false
 
 	// Create a client connection object.
-	awsConn := GetEcsConnection(creds, region)
+	awsConn := GetEcsConnection(session)
 
 	// Fetch the list of services in this cluster.
 	resp, err := awsConn.ListServices(&ecs.ListServicesInput{Cluster: &clusterName})
@@ -113,7 +112,7 @@ func PrintServices(creds *credentials.Credentials,
 // and update the service with its current URL using the string as the tag. For example, passing ":latest" will update the
 // service with the same image, tagged 'latest'.
 //
-func UpdateService(creds *credentials.Credentials, region string, clusterName string, serviceName string, newImage string) {
+func UpdateService(session *session.Session, clusterName string, serviceName string, newImage string) {
 	if newImage == "" {
 		fmt.Println("Error: You must specify a new image URL to update the image!")
 		os.Exit(1)
@@ -121,7 +120,7 @@ func UpdateService(creds *credentials.Credentials, region string, clusterName st
 	var updateTag = str.HasPrefix(newImage, ":")
 
 	fmt.Println("Updating service", serviceName)
-	awsConn := GetEcsConnection(creds, region)
+	awsConn := GetEcsConnection(session)
 	// Get the service, extract task definition
 	serviceInfo, err := awsConn.DescribeServices(&ecs.DescribeServicesInput{
 		Cluster:  &clusterName,
@@ -159,6 +158,7 @@ func UpdateService(creds *credentials.Credentials, region string, clusterName st
 	taskDefinitionOutput, err := awsConn.RegisterTaskDefinition(&ecs.RegisterTaskDefinitionInput{
 		ContainerDefinitions: taskDefn.TaskDefinition.ContainerDefinitions,
 		Family:               taskDefn.TaskDefinition.Family,
+		Volumes:              taskDefn.TaskDefinition.Volumes,
 	})
 	CheckError("registering updated task definition", err)
 	fmt.Println("  -> Task definition updated, registered as revision", *taskDefinitionOutput.TaskDefinition.Revision)
@@ -181,9 +181,9 @@ func UpdateService(creds *credentials.Credentials, region string, clusterName st
 // Check the status of a service by fetching the tasks and comparing task definitions and run state
 // to see if tasks are running the same task definition revision that the service is associated with.
 //
-func CheckService(creds *credentials.Credentials, region string, clusterName string, serviceName string, verboseFlag bool) {
+func CheckService(session *session.Session, clusterName string, serviceName string, verboseFlag bool) {
 	// get the service task definition
-	awsConn := GetEcsConnection(creds, region)
+	awsConn := GetEcsConnection(session)
 	// Get the service, extract task definition
 	serviceInfo, err := awsConn.DescribeServices(&ecs.DescribeServicesInput{
 		Cluster:  &clusterName,
@@ -206,7 +206,7 @@ func CheckService(creds *credentials.Credentials, region string, clusterName str
 	for _, bals := range serviceDef.LoadBalancers {
 		balancerNames = append(balancerNames, bals.LoadBalancerName)
 	}
-	serviceElbs := GetElbData(creds, region, balancerNames)
+	serviceElbs := GetElbData(session, balancerNames)
 	for _, balancer := range serviceElbs.LoadBalancerDescriptions {
 		elbCount += len(balancer.Instances)
 	}

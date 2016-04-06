@@ -8,15 +8,15 @@ package components
 import (
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 //
 // List the user-visible clusters and their service names.
 //
-func ListClusters(creds *credentials.Credentials, region string) {
-	awsConn := GetEcsConnection(creds, region)
+func ListClusters(session *session.Session) {
+	awsConn := ecs.New(session)
 	clusterList, err := awsConn.ListClusters(&ecs.ListClustersInput{})
 	CheckError("fetching clusters list", err)
 	clusters, err := awsConn.DescribeClusters(&ecs.DescribeClustersInput{Clusters: clusterList.ClusterArns})

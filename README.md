@@ -145,4 +145,7 @@ Will display the details of the latest revision of the Task Definition for "my_t
 
 This is still a very beta-version utility, so there may be edge cases not caught, and error handling might not be as robust as it could be. Tread carefully and please submit issues or (even better) fixes.
 
+To build for Linux, if you're working on a Mac for example:
+`GOOS=linux GOARCH=amd64 go build -v -o bin/ecsman.linux`
+
 
